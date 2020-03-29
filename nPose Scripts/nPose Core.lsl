@@ -63,7 +63,7 @@ integer SLOTS_SITTER_TYPE=9;
 integer SLOTS_SITTER_NAME=10;
 
 integer SLOTS_STRIDE=11;
-
+key menuOnSitID;
 string SlotsHash; //MD5; whenever you manipulate the Slots list:update the hash
 integer SEAT_UPDATE_PREAMBLE_LENGTH=3; //Preamble: SlotsStride, preambleLength, csv slotsAnimChanged
 integer SITTER_TYPE_NONE=0;
@@ -194,7 +194,9 @@ integer assignSlots() {
             slotsChangeDetected=TRUE;
             //check if the menu should be displayed
             if(CurMenuOnSit) {
-                llMessageLinked(LINK_SET, DOMENU, "", id);
+                menuOnSitID=id;
+//                llMessageLinked(LINK_SET, DOMENU, "", id);
+//                  moved this line to right after seat update command cause menuonsit=1 combined with SET{seated} was not working.  Menu got DOMENU command before the seat update.
             }
         }
         else {
@@ -281,6 +283,10 @@ integer checkSlotsChange(string ncNameForSequencer, list slotsAnimChanged) {
     if(currentSlotsHash!=SlotsHash || llGetListLength(slotsAnimChanged)) {
         SlotsHash=currentSlotsHash;
         llMessageLinked(LINK_SET, SEAT_UPDATE, llDumpList2String([SLOTS_STRIDE, SEAT_UPDATE_PREAMBLE_LENGTH, llDumpList2String(slotsAnimChanged, ",")] + Slots, "^"), (key)ncNameForSequencer);
+        if(menuOnSitID) {
+            llMessageLinked(LINK_SET, DOMENU, "", menuOnSitID);
+            menuOnSitID = "";
+        }
         return TRUE;
     }
     return FALSE;
