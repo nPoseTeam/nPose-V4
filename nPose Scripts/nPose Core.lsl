@@ -605,6 +605,7 @@ default{
                         //XANIM|seatNumber|csv animations|pos|rot|facials
                         //XANIM works almost like the old SCHMOE command
                         //if you want to implement a command like the old SCHMO|seatnumber... you have to write: XANIM{seatnumber}|seatnumber....
+                        llMessageLinked(LINK_SET, PROP_PLUGIN, "PROP_DO|*|0||DIE", id);
                         integer slotNumber = (integer)llList2String(params,1)-1;
                         if(slotNumber>=0 && slotNumber < SlotsCount) { //sanity
 //                            //generate a hash to determine a animation change
