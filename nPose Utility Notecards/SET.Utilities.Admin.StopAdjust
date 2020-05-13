@@ -1,1 +1,3 @@
+# Since nPose V4 the linkmessage #205 doesn't do a PosDump anymore, so if we want the same behaviour as V3 we have to do it manualy with the 204 linkmessage.
+LINKMSG|204
 LINKMSG|205
