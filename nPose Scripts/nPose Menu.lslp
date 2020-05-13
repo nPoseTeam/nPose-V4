@@ -50,7 +50,7 @@ string UDP_TYPE_BOOL="b";
 string MACRO_TYPE="m";
 
 //NC Reader
-string NC_READER_CONTENT_SEPARATOR="%&§";
+string NC_READER_CONTENT_SEPARATOR="%&Â§";
 
 //plugins related
 string MY_PLUGIN_MENU="npose_menu";
@@ -471,7 +471,7 @@ string buildParamSet1(string path, integer page, string prompt, list additionalB
     return llDumpList2String([
         path,
         page,
-        llDumpList2String(llParseStringKeepNulls(prompt, [","], []), "‚"), // CAUTION: the 2nd "‚" is a UTF sign!
+        llDumpList2String(llParseStringKeepNulls(prompt, [","], []), "Â‚"), // CAUTION: the 2nd "Â‚" is a UTF sign!
         llDumpList2String(additionalButtons, ",")
     ] + llList2List(pluginParams + ["", "", "", ""], 0, 3), "|");
 }
