@@ -116,7 +116,7 @@ string buildParamSet1(string path, integer page, string prompt, list additionalB
     return llDumpList2String([
         path,
         page,
-        llDumpList2String(llParseStringKeepNulls(prompt, [","], []), "‚"), // CAUTION: the 2nd "‚" is a UTF sign!
+        llDumpList2String(llParseStringKeepNulls(prompt, [","], []), "â€š"), // CAUTION: the 2nd "â€š" is a UTF sign!
         llDumpList2String(additionalButtons, ",")
     ] + llList2List(pluginParams + ["", "", "", ""], 0, 3), "|");
 }
