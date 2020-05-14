@@ -75,11 +75,13 @@ doButtons(float xPos, float yPos, key id) {
 }
 
 default {
+	state_entry() {
+		FeedbackSoundAvailable=llGetInventoryType(SOUND_NAME)==INVENTORY_SOUND;
+	}
 	touch_start(integer num_detected) {
 		vector touchedPos = llDetectedTouchST(0);
 		doButtons(touchedPos.x, touchedPos.y, llDetectedKey(0));
 	}
-
 	changed(integer change) {
 		if(change & CHANGED_INVENTORY) {
 			FeedbackSoundAvailable=llGetInventoryType(SOUND_NAME)==INVENTORY_SOUND;
