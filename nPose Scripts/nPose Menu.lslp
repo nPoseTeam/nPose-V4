@@ -471,7 +471,7 @@ string buildParamSet1(string path, integer page, string prompt, list additionalB
     return llDumpList2String([
         path,
         page,
-        llDumpList2String(llParseStringKeepNulls(prompt, [","], []), ""), // CAUTION: the 2nd "" is a UTF sign!
+        llDumpList2String(llParseStringKeepNulls(prompt, [","], []), "‚"), // CAUTION: the 2nd "‚" is a UTF sign!
         llDumpList2String(additionalButtons, ",")
     ] + llList2List(pluginParams + ["", "", "", ""], 0, 3), "|");
 }
@@ -792,7 +792,7 @@ default{
                     //A button will be
                     //1) if someone/something sits on the seat: the sitter name
                     //2) else: the seat name
-                    //We can highlight one avatar or one slotnumber by surrounding a "?". In the standart unsit/changeSeat menu this will be the menu user
+                    //We can highlight one avatar or one slotnumber by surrounding a "⚫". In the standart unsit/changeSeat menu this will be the menu user
                     //We use the "button comment" to store the slotnumber to make it easier to parse the response
                     integer length=llGetListLength(Slots);
                     list buttons;
@@ -810,7 +810,7 @@ default{
                             }
                             //highlight
                             if(sitterKey==highlightAvatar || index/SLOTS_STRIDE==highlightSlot) {
-                                currentButtonName="?" + currentButtonName + "?";
+                                currentButtonName="⚫" + currentButtonName + "⚫";
                             }
 
                             currentButtonName=MARKER_COMMENT_START + (string)(index/SLOTS_STRIDE) + MARKER_COMMENT_END + currentButtonName;
