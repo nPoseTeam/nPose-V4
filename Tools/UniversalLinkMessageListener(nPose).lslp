@@ -141,6 +141,12 @@ list REPLACE_NUM=[
 	-8040, "Xcite! Plugin:XCITE_COMMAND", "https://github.com/LeonaMorro/nPose-Xcite-plugin/wiki/Link-messages",
 	-8050, "nPose Prim Params Editor plugin", "https://github.com/nPoseTeam/Prim-Params-Editor-plugin",
 	//
+	//-14000 - -15000 reserved for Howard
+	-14002, "Animesh plugin", "https://github.com/nPoseTeam/nPose-Animesh-Plugin",
+	-14003, "Animesh plugin", "Move animesh when used as a prop relative to the rezzer",
+	-14020, "Animesh plugin", "Allows us to start bento animations and set params on stand alone animesh",
+	-14021, "Animesh plugin", "Set up override mode variables",
+	//
 	-888888, "tip jar plugin:arb number", "exclusive to the tip jar to send parameters needed in this plugin.", 
 	-22452987, "color/texture changer plugin:arbNum (deprecated, doesn't work with nPose V3)", "The plugin uses this to identify when it is supposed to act on the message.  It accepts the message and relays out to prims using this number as a listen channel.  This same script located in props receives the info and does the retexturing of prims.", 
 	-22452988, "color/texture changer plugin:arbNum+1 (deprecated, doesn't work with nPose V3)", "The plugin uses this to identify when it is supposed to act on the message.  It accepts the message and relays out to prims using this number as a listen channel.  This same script located in props receives the info and does the retexturing of prims.", 
