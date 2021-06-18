@@ -146,6 +146,9 @@ list REPLACE_NUM=[
 	-14003, "Animesh plugin", "Move animesh when used as a prop relative to the rezzer",
 	-14020, "Animesh plugin", "Allows us to start bento animations and set params on stand alone animesh",
 	-14021, "Animesh plugin", "Set up override mode variables",
+	-14050, "Physics Cock Partner plugin", "Interface between nPose and the actual physics cock",
+	-14051, "Physics Cock Partner plugin", "Interface between nPose and the actual V-Bento Vagina",
+	-140060, "Lush Plugin", "A Plugin to activate and set modes for a Lush device",
 	//
 	-888888, "tip jar plugin:arb number", "exclusive to the tip jar to send parameters needed in this plugin.", 
 	-22452987, "color/texture changer plugin:arbNum (deprecated, doesn't work with nPose V3)", "The plugin uses this to identify when it is supposed to act on the message.  It accepts the message and relays out to prims using this number as a listen channel.  This same script located in props receives the info and does the retexturing of prims.", 
