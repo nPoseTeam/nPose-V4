@@ -133,6 +133,16 @@ UpdateDefaultCard() {
     }
 }
 
+GetGender() {
+    integer slotIndex;
+    integer slots = llGetListLength(Slots)/11;
+    key AVID;
+    for(slotIndex=0; slotIndex<slots; ++slotIndex) {
+        AVID= llList2Key(Slots, (slotIndex*11) + 8);
+        llMessageLinked(LINK_SET, DO, "UDPBOOL|MS" + (string)(slotIndex + 1) + "=" +  (string)llList2Float(llGetObjectDetails(AVID, ([OBJECT_BODY_SHAPE_TYPE])), 0), "");
+    }
+}
+
 integer assignSlots() {
     //returns true if the Slots list was changed
     integer slotsChangeDetected;
@@ -144,7 +154,7 @@ integer assignSlots() {
         if(llGetAgentSize(id) != ZERO_VECTOR) {
             //is an Avatar
             //add gender to the list ... howard
-            sittingAvatars = [id, 0, (integer)llList2Float(llGetObjectDetails(id, ([OBJECT_BODY_SHAPE_TYPE])), 0)] + sittingAvatars;
+            sittingAvatars = [id, 0] + sittingAvatars;
         }
         else {
             //is a prim
@@ -163,7 +173,7 @@ integer assignSlots() {
         if(llList2Integer(Slots, index+SLOTS_SITTER_TYPE)==SITTER_TYPE_AVATAR) {
             integer indexSittingAvatars;
             if(llGetListLength(sittingAvatars) && ~(indexSittingAvatars=llListFindList(sittingAvatars, [llList2Key(Slots, index + SLOTS_SITTER_KEY)]))) {
-                sittingAvatars=llDeleteSubList(sittingAvatars, indexSittingAvatars, indexSittingAvatars+2);
+                sittingAvatars=llDeleteSubList(sittingAvatars, indexSittingAvatars, indexSittingAvatars+1);
             }
             else {
                 Slots=llListReplaceList(Slots, ["", SITTER_TYPE_NONE, ""], index + SLOTS_SITTER_KEY, index + SLOTS_SITTER_NAME);
@@ -203,8 +213,8 @@ integer assignSlots() {
             unsitAvatars+=[id];
         }
         //create the gender for this seat as a udpbool
-        llMessageLinked(LINK_SET, DO, "UDPBOOL|MS" + llList2String(sittingAvatars, 1) + "=" +  llList2String(sittingAvatars, 2), "");
-        sittingAvatars=llDeleteSubList(sittingAvatars, 0, 2);
+        GetGender();
+        sittingAvatars=llDeleteSubList(sittingAvatars, 0, 1);
     }
     if(llGetListLength(unsitAvatars)) {
         llMessageLinked(LINK_SET, DO, "UNSIT|" + llList2CSV(unsitAvatars), NULL_KEY);
@@ -473,12 +483,12 @@ default{
                             }
                         }
                         if(~llSubStringIndex(data, ".NAME%")) {
-                            for(slotNumber=0; slotNumber<SlotsCount; slotNumber+=SLOTS_STRIDE) {
+                            for(slotNumber=0; slotNumber<SlotsCount; slotNumber++) {
                                 data = llDumpList2String(llParseStringKeepNulls(data, ["%" + (string)(slotNumber+1) + ".NAME%"], []), llList2String(Slots, slotNumber * SLOTS_STRIDE + SLOTS_SITTER_NAME));
                             }
                         }
                         if(~llSubStringIndex(data, ".SEATNAME%")) {
-                            for(slotNumber=0; slotNumber<SlotsCount; slotNumber+=SLOTS_STRIDE) {
+                            for(slotNumber=0; slotNumber<SlotsCount; slotNumber++) {
                                 data = llDumpList2String(llParseStringKeepNulls(data, ["%" + (string)(slotNumber+1) + ".SEATNAME%"], []), llList2String(Slots, slotNumber * SLOTS_STRIDE + SLOTS_SEAT_NAME));
                             }
                         }
@@ -605,6 +615,7 @@ default{
                         //XANIM|seatNumber|csv animations|pos|rot|facials
                         //XANIM works almost like the old SCHMOE command
                         //if you want to implement a command like the old SCHMO|seatnumber... you have to write: XANIM{seatnumber}|seatnumber....
+                        llMessageLinked(LINK_SET, PROP_PLUGIN, "PROP_DO|*|0||DIE", id);
                         integer slotNumber = (integer)llList2String(params,1)-1;
                         if(slotNumber>=0 && slotNumber < SlotsCount) { //sanity
 //                            //generate a hash to determine a animation change
@@ -717,6 +728,8 @@ default{
                                 index2 + SLOTS_SITTER_NAME
                             );
                         }
+                        //update gender
+                        GetGender();
                     }
                     else if(action=="PAUSE") {
                         llSleep((float)llList2String(params, 1));
