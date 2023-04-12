@@ -6,18 +6,24 @@
 //
 // "Full perms" means having the modify, copy, and transfer permissions enabled in Second Life and/or other virtual world platforms derived from Second Life (such as OpenSim).  If the platform should allow more fine-grained permissions, then "full perms" will mean the most permissive possible set of permissions allowed by the platform.
 //
+// This version is a re-write by Howard.  This version uses a new feature that LL inplimented for us to use a LinkSetData storage that offers us 65K of memory not including the script memory.
+// By using this LinkSetData storage, we gain at worst case 4X the card content storage capability.  This results in faster re-menu, and also does not clear the storage when scripts are reset.
+// One drawback is that this script will lock up when the LinkSetData storage is full (no menu) and requires this script to be reset.
+// When this script locks up, please be aware you're at the limit of card contents storage.  The only thing to do is to try to be smarter about what goes inside these cards (less lines).
+// I've heard talk that LL is planning to increase the amount of LinkSetData storage, possibly up to 128k. We will hope that this does happen.
+//
 // Documentation:
-// https://github.com/nPoseTeam/nPose-V3/wiki
+// https://github.com/nPoseTeam/nPose-V4/wiki
 // Report Bugs to:
-// https://github.com/nPoseTeam/nPose-V3/issues
+// https://github.com/nPoseTeam/nPose-V4/issues
 // or sent an IM to: slmember1 Resident (Leona)
+// or send an IM to: Howard Baxton (Howard)
 //
 // Have fun
 // Leona
 
 integer MEMORY_TO_BE_USED_SL=60000;
-integer MEMORY_TO_BE_USED_IW=120000;
-integer CARDS_TO_BE_USED=50;
+key oldKey;
 
 string NC_READER_CONTENT_SEPARATOR="%&§";
 
@@ -54,34 +60,12 @@ integer RESPONSE_STACK_STRIDE=5;
 integer CacheMiss; //only used for statistical data
 integer Requests; //only used for statistical data
 
-integer GridType;
-integer GRID_TYPE_OTHER=0; 
-integer GRID_TYPE_SL=1; //Second Life
-integer GRID_TYPE_IW=2; //InWorldz
-integer GRID_TYPE_DW=4; //DigiWorldz
-string GRID_TYPE_SL_STRING="Second Life Server";
-string GRID_TYPE_IW_STRING="Halcyon Server";
-string GRID_TYPE_DW_STRING="OpenSim";
-
 checkMemory() {
     //if memory is low, discard the oldest cache entry
-    if((GridType && GRID_TYPE_SL) || (GridType && GRID_TYPE_IW)) {
-        integer memoryToBeUsed=MEMORY_TO_BE_USED_SL;
-        if(GridType && GRID_TYPE_IW) {
-            memoryToBeUsed=MEMORY_TO_BE_USED_IW;
-        }
-        while(llGetUsedMemory()>memoryToBeUsed) {
-            CacheNcNames=llDeleteSubList(CacheNcNames, 0, 0);
-            CacheContent=llDeleteSubList(CacheContent, 0, 0);
-        }
-    }
-    else {
-        //in OpenSimulator we are not able to detect the current used memory
-        integer numberOfCards=llGetListLength(CacheNcNames);
-        if(numberOfCards>CARDS_TO_BE_USED) {
-            CacheNcNames=llDeleteSubList(CacheNcNames, 0, numberOfCards - CARDS_TO_BE_USED - 1);
-            CacheContent=llDeleteSubList(CacheContent, 0, numberOfCards - CARDS_TO_BE_USED - 1);
-        }
+    integer memoryToBeUsed=MEMORY_TO_BE_USED_SL;
+    while(llGetUsedMemory()>memoryToBeUsed) {
+        CacheNcNames=llDeleteSubList(CacheNcNames, 0, 0);
+        CacheContent=llDeleteSubList(CacheContent, 0, 0);
     }
 }
 
@@ -119,27 +103,21 @@ processResponseStack() {
             // the reader is running, we cant do anything
             return;
         }
-        integer index=llListFindList(CacheNcNames, [ncName]);
-        if(~index) {
-            //The data is in the cache (and therefore valid and fully read) .. send the response
-            //data Format:
-            //str (separated by the NC_READER_CONTENT_SEPARATOR: ncName, userDefinedData1, userDefinedData1, content
-            llMessageLinked(
-                LINK_SET,
-                llList2Integer(ResponseStack, RESPONSE_STACK_TYPE),
-                llDumpList2String(llList2List(ResponseStack, 0, 2), NC_READER_CONTENT_SEPARATOR) + llList2String(CacheContent, index),
-                llList2Key(ResponseStack, RESPONSE_STACK_AVATAR_KEY)
-            );
-            //we serverd the response, so we can delete it from the stack and check if there is more to do
-            ResponseStack=llDeleteSubList(ResponseStack, 0, RESPONSE_STACK_STRIDE - 1);
-            //sort it to the end to keep it for a longer time
-            CacheNcNames=llDeleteSubList(CacheNcNames, index, index) + llList2List(CacheNcNames, index, index);
-            CacheContent=llDeleteSubList(CacheContent, index, index) + llList2List(CacheContent, index, index);
-        }
-        else {
-            //we need to start the reader
-            //sanity: check the presense of the nc once more. It should be almost impossible that the NC is deleted meanwhile, because
-            //if it is deleted, all the lists (esp. the ResponseStack) is also deleted in the changed event and we should not be here
+        //if it isn't in the LinkSetData store, we also need to read the card.
+        //if the ncName key doesn't match the key for this card in linksetdata, the card has been changed and will need to be read.
+        //if keys do match then we can go ahead and use what's stored in LinkSetData store without the need to read the card.
+        //Get list of keys from linksetdata
+        list stored_keys = llLinksetDataListKeys(0, -1);
+        //find the index of our ncName within the stored list of keys
+        integer index1 = llListFindList(stored_keys, [ncName]);
+        //parse the list so we can remove the uuid for this card.. otherwise our data will be all messed up.
+        list temp_Thing = llParseStringKeepNulls(llLinksetDataRead(ncName), [NC_READER_CONTENT_SEPARATOR], []);
+        //Grab that ncName key so we can use it to tell if the real card has been modified.. if modified we need to re-read it and update linksetdata
+        oldKey = llList2Key(temp_Thing, 0);
+        //Remove that key here from our list
+        temp_Thing = llDeleteSubList(temp_Thing, 0,0);
+        if(!~index1 || llGetInventoryKey(ncName) != oldKey) {
+            //we need to read the card.
             if(llGetInventoryType(ncName) == INVENTORY_NOTECARD) {
                 CacheMiss++;
                 NcReadStackNcNames+=[ncName];
@@ -151,20 +129,49 @@ processResponseStack() {
                 ResponseStack=llDeleteSubList(ResponseStack, 0, RESPONSE_STACK_STRIDE - 1);
             }
         }
+        integer index=llListFindList(CacheNcNames, [ncName]);
+        if(~index1) {
+            if(llList2Integer(ResponseStack, RESPONSE_STACK_TYPE) == 222) {
+                //The data is in the cache (and therefore valid and fully read) .. send the response
+                //data Format:
+                //str (separated by the NC_READER_CONTENT_SEPARATOR: ncName, userDefinedData1, userDefinedData1, content
+                llLinksetDataWrite(ncName, llLinksetDataRead(ncName));
+                llMessageLinked(
+                    LINK_SET,
+                    llList2Integer(ResponseStack, RESPONSE_STACK_TYPE),
+                    llDumpList2String(temp_Thing, NC_READER_CONTENT_SEPARATOR),
+                    llList2Key(ResponseStack, RESPONSE_STACK_AVATAR_KEY)
+                );
+            }
+            else {
+                //The data is in the cache (and therefore valid and fully read) .. send the response
+                //data Format:
+                //str (separated by the NC_READER_CONTENT_SEPARATOR: ncName, userDefinedData1, userDefinedData1, content
+                llMessageLinked(
+                    LINK_SET,
+                    llList2Integer(ResponseStack, RESPONSE_STACK_TYPE),
+                    llDumpList2String(ResponseStack, NC_READER_CONTENT_SEPARATOR),
+                    llList2Key(ResponseStack, RESPONSE_STACK_AVATAR_KEY)
+                );
+            }
+            //we serverd the response, so we can delete it from the stack and check if there is more to do
+            ResponseStack=llDeleteSubList(ResponseStack, 0, RESPONSE_STACK_STRIDE - 1);
+            //sort it to the end to keep it for a longer time
+            CacheNcNames=llDeleteSubList(CacheNcNames, index, index) + llList2List(CacheNcNames, index, index);
+            CacheContent=llDeleteSubList(CacheContent, index, index) + llList2List(CacheContent, index, index);
+        }
     }
     while(TRUE);
 }
 
 default {
-    state_entry() {
-        string simChannel=llGetEnv("sim_channel");
-        GridType=
-            GRID_TYPE_SL * (simChannel==GRID_TYPE_SL_STRING) + 
-            GRID_TYPE_DW * (simChannel==GRID_TYPE_DW_STRING) + 
-            GRID_TYPE_IW * (simChannel==GRID_TYPE_IW_STRING)
-        ;
-    }
+    
     link_message(integer sender, integer num, string str, key id) {
+        if(num == -226 && llToLower(str) == "reset") {
+            llLinksetDataReset();
+            llOwnerSay("reset LinkSetdata memory.");
+            return;
+        }
         if(num==DOPOSE) {
             //str (separated by NC_READER_CONTENT_SEPARATOR): ncName, userDefinedData1, userDefinedData1
             //id: userDefinedKey
@@ -191,8 +198,9 @@ default {
                 ", Leaving " + (string)llGetFreeMemory() + " memory free.\nWe served " +
                 (string)Requests + " requests with a cache hit rate of " + 
                 (string)llRound(hitRate) + "%." + 
-                "\nGridType: " + (string)GridType + 
-                "\n" + (string)llGetListLength(CacheNcNames) + " cards cached."
+                "\nlinkSet Memory Free: " + (string)llLinksetDataAvailable() + 
+                "\nlinkSet cached " + (string)llLinksetDataCountKeys() + " cards." +
+                "\n" + (string)llGetListLength(CacheNcNames) + " cards cached in the script."
             );
         }
     }
@@ -216,8 +224,13 @@ default {
             checkMemory();
             if(data==EOF) {
                 //move the stuff to the cache and process the response stack
+                CacheNcNames=[];
+                CacheContent=[];
                 CacheNcNames+=ncName;
                 CacheContent+=llList2String(NcReadStack, ncReadStackIndex + NC_READ_STACK_CONTENT);
+                integer index = llListFindList(CacheContent, [ncName]);
+                list temp = (string)llGetInventoryKey(ncName) + llList2List(ResponseStack, 0, 2);
+                llLinksetDataWrite(ncName, llDumpList2String(llList2List(temp, 0, 3), NC_READER_CONTENT_SEPARATOR) + llList2String(CacheContent, index));
                 NcReadStackNcNames=llDeleteSubList(NcReadStackNcNames, ncReadStackIndex, ncReadStackIndex);
                 NcReadStack=llDeleteSubList(NcReadStack, ncReadStackIndex, ncReadStackIndex + NC_READ_STACK_STRIDE - 1);
                 processResponseStack();
