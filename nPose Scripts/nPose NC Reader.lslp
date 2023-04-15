@@ -63,9 +63,11 @@ integer Requests; //only used for statistical data
 checkMemory() {
     //if memory is low, discard the oldest cache entry
     integer memoryToBeUsed=MEMORY_TO_BE_USED_SL;
-    while(llGetUsedMemory()>memoryToBeUsed) {
-        CacheNcNames=llDeleteSubList(CacheNcNames, 0, 0);
-        CacheContent=llDeleteSubList(CacheContent, 0, 0);
+    while(llLinksetDataAvailable() < 2000) {
+        integer random = (integer)(llFrand(llLinksetDataCountKeys()-5) + 5.0);
+        list stored_keys = llLinksetDataListKeys(random, 2);
+        llLinksetDataDelete(llList2String(stored_keys, 0));
+        llLinksetDataDelete(llList2String(stored_keys, 1));
     }
 }
 
@@ -198,9 +200,8 @@ default {
                 ", Leaving " + (string)llGetFreeMemory() + " memory free.\nWe served " +
                 (string)Requests + " requests with a cache hit rate of " + 
                 (string)llRound(hitRate) + "%." + 
-                "\nlinkSet Memory Free: " + (string)llLinksetDataAvailable() + 
-                "\nlinkSet cached " + (string)llLinksetDataCountKeys() + " cards." +
-                "\n" + (string)llGetListLength(CacheNcNames) + " cards cached in the script."
+                "\nlinkSetData using " + (string)(65536 - llLinksetDataAvailable()) + " of 65536, Leaving " + (string)llLinksetDataAvailable() + " of Free Memory" + 
+                "\nlinkSetData cached " + (string)llLinksetDataCountKeys() + " cards."
             );
         }
     }
