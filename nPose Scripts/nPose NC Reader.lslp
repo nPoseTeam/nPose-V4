@@ -61,7 +61,7 @@ integer CacheMiss; //only used for statistical data
 integer Requests; //only used for statistical data
 
 checkMemory() {
-    //if memory is low, discard the oldest cache entry
+    //if memory is low, discard cache key/value pairs starting at a random point since we cannot control the order which LinkSetData returns keys.
     integer memoryToBeUsed=MEMORY_TO_BE_USED_SL;
     while(llLinksetDataAvailable() < 2000) {
         integer random = (integer)(llFrand(llLinksetDataCountKeys()-5) + 5.0);
@@ -130,32 +130,19 @@ processResponseStack() {
                 //we should remove this entry from the response stack, even if we expect all the lists to be deleted in the expected changed event
                 ResponseStack=llDeleteSubList(ResponseStack, 0, RESPONSE_STACK_STRIDE - 1);
             }
-        }
         integer index=llListFindList(CacheNcNames, [ncName]);
-        if(~index1) {
-            if(llList2Integer(ResponseStack, RESPONSE_STACK_TYPE) == 222) {
-                //The data is in the cache (and therefore valid and fully read) .. send the response
-                //data Format:
-                //str (separated by the NC_READER_CONTENT_SEPARATOR: ncName, userDefinedData1, userDefinedData1, content
-                llLinksetDataWrite(ncName, llLinksetDataRead(ncName));
-                llMessageLinked(
-                    LINK_SET,
-                    llList2Integer(ResponseStack, RESPONSE_STACK_TYPE),
-                    llDumpList2String(temp_Thing, NC_READER_CONTENT_SEPARATOR),
-                    llList2Key(ResponseStack, RESPONSE_STACK_AVATAR_KEY)
-                );
-            }
-            else {
-                //The data is in the cache (and therefore valid and fully read) .. send the response
-                //data Format:
-                //str (separated by the NC_READER_CONTENT_SEPARATOR: ncName, userDefinedData1, userDefinedData1, content
-                llMessageLinked(
-                    LINK_SET,
-                    llList2Integer(ResponseStack, RESPONSE_STACK_TYPE),
-                    llDumpList2String(ResponseStack, NC_READER_CONTENT_SEPARATOR),
-                    llList2Key(ResponseStack, RESPONSE_STACK_AVATAR_KEY)
-                );
-            }
+        }
+        else {
+            integer index=llListFindList(CacheNcNames, [ncName]);
+            //The data is in the cache (and therefore valid and fully read) .. send the response
+            //data Format:
+            //str (separated by the NC_READER_CONTENT_SEPARATOR: ncName, userDefinedData1, userDefinedData1, content
+            llMessageLinked(
+                LINK_SET,
+                llList2Integer(ResponseStack, RESPONSE_STACK_TYPE),
+                llDumpList2String(temp_Thing, NC_READER_CONTENT_SEPARATOR),
+                llList2Key(ResponseStack, RESPONSE_STACK_AVATAR_KEY)
+            );
             //we serverd the response, so we can delete it from the stack and check if there is more to do
             ResponseStack=llDeleteSubList(ResponseStack, 0, RESPONSE_STACK_STRIDE - 1);
             //sort it to the end to keep it for a longer time
@@ -171,7 +158,6 @@ default {
     link_message(integer sender, integer num, string str, key id) {
         if(num == -226 && llToLower(str) == "reset") {
             llLinksetDataReset();
-            llOwnerSay("reset LinkSetdata memory.");
             return;
         }
         if(num==DOPOSE) {
@@ -200,7 +186,7 @@ default {
                 ", Leaving " + (string)llGetFreeMemory() + " memory free.\nWe served " +
                 (string)Requests + " requests with a cache hit rate of " + 
                 (string)llRound(hitRate) + "%." + 
-                "\nlinkSetData using " + (string)(65536 - llLinksetDataAvailable()) + " of 65536, Leaving " + (string)llLinksetDataAvailable() + " of Free Memory" + 
+                "\nlinkSetData using " + (string)(131072 - llLinksetDataAvailable()) + " of 131072, Leaving " + (string)llLinksetDataAvailable() + " of Free Memory" + 
                 "\nlinkSetData cached " + (string)llLinksetDataCountKeys() + " cards."
             );
         }
@@ -261,6 +247,16 @@ default {
             NcReadStackNcNames=[];
             NcReadStack=[];
             ResponseStack=[];
+            //clearing keys from LinkSetData storage where the key (card name) no longer exists in contents.. SET cards have been deleted from contents.
+            list tempList = llLinksetDataListKeys(0, -1);
+            integer i;
+            integer stop = llLinksetDataCountKeys();
+            while (++i < stop) {
+                string ncName = llList2String(tempList, i);
+                if(llGetInventoryType(ncName) != INVENTORY_NOTECARD) {
+                    llLinksetDataDelete(ncName);
+                }
+            }
         }
     }
 }
