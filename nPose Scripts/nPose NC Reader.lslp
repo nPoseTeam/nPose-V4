@@ -24,6 +24,7 @@
 
 integer MEMORY_TO_BE_USED_SL=60000;
 key oldKey;
+string lastCacheContents;
 
 string NC_READER_CONTENT_SEPARATOR="%&§";
 
@@ -130,19 +131,20 @@ processResponseStack() {
                 //we should remove this entry from the response stack, even if we expect all the lists to be deleted in the expected changed event
                 ResponseStack=llDeleteSubList(ResponseStack, 0, RESPONSE_STACK_STRIDE - 1);
             }
-        integer index=llListFindList(CacheNcNames, [ncName]);
         }
         else {
-            integer index=llListFindList(CacheNcNames, [ncName]);
+        integer index=llListFindList(CacheNcNames, [ncName]);
             //The data is in the cache (and therefore valid and fully read) .. send the response
             //data Format:
             //str (separated by the NC_READER_CONTENT_SEPARATOR: ncName, userDefinedData1, userDefinedData1, content
-            llMessageLinked(
-                LINK_SET,
-                llList2Integer(ResponseStack, RESPONSE_STACK_TYPE),
-                llDumpList2String(temp_Thing, NC_READER_CONTENT_SEPARATOR),
-                llList2Key(ResponseStack, RESPONSE_STACK_AVATAR_KEY)
-            );
+            if(~index1) {
+                llMessageLinked(
+                    LINK_SET,
+                    llList2Integer(ResponseStack, RESPONSE_STACK_TYPE),
+                    llDumpList2String(llList2List(ResponseStack, 0, 1) + llList2List(temp_Thing, 2, -1), NC_READER_CONTENT_SEPARATOR),
+                    llList2Key(ResponseStack, RESPONSE_STACK_AVATAR_KEY)
+                );
+            }
             //we serverd the response, so we can delete it from the stack and check if there is more to do
             ResponseStack=llDeleteSubList(ResponseStack, 0, RESPONSE_STACK_STRIDE - 1);
             //sort it to the end to keep it for a longer time
@@ -215,9 +217,10 @@ default {
                 CacheContent=[];
                 CacheNcNames+=ncName;
                 CacheContent+=llList2String(NcReadStack, ncReadStackIndex + NC_READ_STACK_CONTENT);
+                lastCacheContents = llDumpList2String(CacheContent, NC_READER_CONTENT_SEPARATOR);
                 integer index = llListFindList(CacheContent, [ncName]);
                 list temp = (string)llGetInventoryKey(ncName) + llList2List(ResponseStack, 0, 2);
-                llLinksetDataWrite(ncName, llDumpList2String(llList2List(temp, 0, 3), NC_READER_CONTENT_SEPARATOR) + llList2String(CacheContent, index));
+                llLinksetDataWrite(ncName, llDumpList2String(llList2List(temp, 0, 3), NC_READER_CONTENT_SEPARATOR) + lastCacheContents);
                 NcReadStackNcNames=llDeleteSubList(NcReadStackNcNames, ncReadStackIndex, ncReadStackIndex);
                 NcReadStack=llDeleteSubList(NcReadStack, ncReadStackIndex, ncReadStackIndex + NC_READ_STACK_STRIDE - 1);
                 processResponseStack();
